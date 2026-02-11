@@ -12,8 +12,25 @@ import (
 type Handler struct {
 	protocol316.Handler
 
-	Initialize             InitializeFunc
+	// General Messages (3.17 version)
+	Initialize InitializeFunc
+
+	// Pull Diagnostics
 	TextDocumentDiagnostic TextDocumentDiagnosticFunc
+
+	// Type Hierarchy
+	TextDocumentPrepareTypeHierarchy TextDocumentPrepareTypeHierarchyFunc
+	TypeHierarchySupertypes          TypeHierarchySupertypesFunc
+	TypeHierarchySubtypes            TypeHierarchySubtypesFunc
+
+	// Inlay Hints
+	TextDocumentInlayHint     TextDocumentInlayHintFunc
+	InlayHintResolve          InlayHintResolveFunc
+	WorkspaceInlayHintRefresh WorkspaceInlayHintRefreshFunc
+
+	// Inline Values
+	TextDocumentInlineValue     TextDocumentInlineValueFunc
+	WorkspaceInlineValueRefresh WorkspaceInlineValueRefreshFunc
 
 	initialized bool
 	lock        sync.Mutex
@@ -649,6 +666,86 @@ func (self *Handler) Handle(context *glsp.Context) (r any, validMethod bool, val
 			}
 		}
 
+	// Type Hierarchy
+
+	case MethodTextDocumentPrepareTypeHierarchy:
+		if self.TextDocumentPrepareTypeHierarchy != nil {
+			validMethod = true
+			var params TypeHierarchyPrepareParams
+			if err = json.Unmarshal(context.Params, &params); err == nil {
+				validParams = true
+				r, err = self.TextDocumentPrepareTypeHierarchy(context, &params)
+			}
+		}
+
+	case MethodTypeHierarchySupertypes:
+		if self.TypeHierarchySupertypes != nil {
+			validMethod = true
+			var params TypeHierarchySupertypesParams
+			if err = json.Unmarshal(context.Params, &params); err == nil {
+				validParams = true
+				r, err = self.TypeHierarchySupertypes(context, &params)
+			}
+		}
+
+	case MethodTypeHierarchySubtypes:
+		if self.TypeHierarchySubtypes != nil {
+			validMethod = true
+			var params TypeHierarchySubtypesParams
+			if err = json.Unmarshal(context.Params, &params); err == nil {
+				validParams = true
+				r, err = self.TypeHierarchySubtypes(context, &params)
+			}
+		}
+
+	// Inlay Hints
+
+	case MethodTextDocumentInlayHint:
+		if self.TextDocumentInlayHint != nil {
+			validMethod = true
+			var params InlayHintParams
+			if err = json.Unmarshal(context.Params, &params); err == nil {
+				validParams = true
+				r, err = self.TextDocumentInlayHint(context, &params)
+			}
+		}
+
+	case MethodInlayHintResolve:
+		if self.InlayHintResolve != nil {
+			validMethod = true
+			var params InlayHint
+			if err = json.Unmarshal(context.Params, &params); err == nil {
+				validParams = true
+				r, err = self.InlayHintResolve(context, &params)
+			}
+		}
+
+	case MethodWorkspaceInlayHintRefresh:
+		if self.WorkspaceInlayHintRefresh != nil {
+			validMethod = true
+			validParams = true
+			err = self.WorkspaceInlayHintRefresh(context)
+		}
+
+	// Inline Values
+
+	case MethodTextDocumentInlineValue:
+		if self.TextDocumentInlineValue != nil {
+			validMethod = true
+			var params InlineValueParams
+			if err = json.Unmarshal(context.Params, &params); err == nil {
+				validParams = true
+				r, err = self.TextDocumentInlineValue(context, &params)
+			}
+		}
+
+	case MethodWorkspaceInlineValueRefresh:
+		if self.WorkspaceInlineValueRefresh != nil {
+			validMethod = true
+			validParams = true
+			err = self.WorkspaceInlineValueRefresh(context)
+		}
+
 	default:
 		if self.CustomRequest != nil {
 			if handler, ok := self.CustomRequest[context.Method]; ok && (handler.Func != nil) {
@@ -917,6 +1014,23 @@ func (self *Handler) CreateServerCapabilities() ServerCapabilities {
 			InterFileDependencies: true,
 			WorkspaceDiagnostics:  false,
 		}
+	}
+
+	if self.TextDocumentPrepareTypeHierarchy != nil {
+		capabilities.TypeHierarchyProvider = true
+	}
+
+	if self.TextDocumentInlayHint != nil {
+		options := &InlayHintOptions{}
+		if self.InlayHintResolve != nil {
+			resolveProvider := true
+			options.ResolveProvider = &resolveProvider
+		}
+		capabilities.InlayHintProvider = options
+	}
+
+	if self.TextDocumentInlineValue != nil {
+		capabilities.InlineValueProvider = true
 	}
 
 	return capabilities

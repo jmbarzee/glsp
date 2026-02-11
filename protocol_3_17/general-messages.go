@@ -26,7 +26,105 @@ type InitializeParams struct {
 type ClientCapabilities struct {
 	protocol316.ClientCapabilities
 
+	/**
+	 * General client capabilities.
+	 *
+	 * @since 3.16.0
+	 */
+	General *GeneralClientCapabilities `json:"general,omitempty"`
+
+	/**
+	 * Workspace specific client capabilities.
+	 */
+	Workspace *WorkspaceClientCapabilities `json:"workspace,omitempty"`
+
 	TextDocument *TextDocumentClientCapabilities `json:"textDocument,omitempty"`
+}
+
+/**
+ * Workspace specific client capabilities.
+ */
+type WorkspaceClientCapabilities struct {
+	/**
+	 * Capabilities specific to the inlay hint requests scoped to the
+	 * workspace.
+	 *
+	 * @since 3.17.0
+	 */
+	InlayHint *InlayHintWorkspaceClientCapabilities `json:"inlayHint,omitempty"`
+
+	/**
+	 * Capabilities specific to the inline value requests scoped to the
+	 * workspace.
+	 *
+	 * @since 3.17.0
+	 */
+	InlineValue *InlineValueWorkspaceClientCapabilities `json:"inlineValue,omitempty"`
+}
+
+/**
+ * General client capabilities.
+ *
+ * @since 3.16.0
+ */
+type GeneralClientCapabilities struct {
+	/**
+	 * Client capability that signals how the client
+	 * handles stale requests (e.g. a request
+	 * for which the client will not process the response
+	 * anymore since the information is outdated).
+	 *
+	 * @since 3.17.0
+	 */
+	StaleRequestSupport *struct {
+		/**
+		 * The client will actively cancel the request.
+		 */
+		Cancel bool `json:"cancel"`
+
+		/**
+		 * The list of requests for which the client
+		 * will retry the request if it receives a
+		 * response with error code `ContentModified``
+		 */
+		RetryOnContentModified []string `json:"retryOnContentModified"`
+	} `json:"staleRequestSupport,omitempty"`
+
+	/**
+	 * Client capabilities specific to regular expressions.
+	 *
+	 * @since 3.16.0
+	 */
+	RegularExpressions *protocol316.RegularExpressionsClientCapabilities `json:"regularExpressions,omitempty"`
+
+	/**
+	 * Client capabilities specific to the client's markdown parser.
+	 *
+	 * @since 3.16.0
+	 */
+	Markdown *protocol316.MarkdownClientCapabilities `json:"markdown,omitempty"`
+
+	/**
+	 * The position encodings supported by the client. Client and server
+	 * have to agree on the same position encoding to ensure that offsets
+	 * (e.g. character position in a line) are interpreted the same on both
+	 * side.
+	 *
+	 * To keep the protocol backwards compatible the following applies: if
+	 * the value 'utf-16' is missing from the array of position encodings
+	 * servers can assume that the client supports UTF-16. UTF-16 is
+	 * therefore a mandatory encoding.
+	 *
+	 * If omitted it defaults to ['utf-16'].
+	 *
+	 * Implementation considerations: since the conversion from one encoding
+	 * into another requires the content of the file / line the conversion
+	 * is best done where the file is read which is usually on the server
+	 * side.
+	 *
+	 * @since 3.17.0
+	 */
+	PositionEncodings []PositionEncodingKind `json:"positionEncodings,omitempty"`
 }
 
 /**
@@ -41,6 +139,27 @@ type TextDocumentClientCapabilities struct {
 	 * @since 3.17.0
 	 */
 	Diagnostic *DiagnosticClientCapabilities `json:"diagnostic,omitempty"`
+
+	/**
+	 * Capabilities specific to the various type hierarchy requests.
+	 *
+	 * @since 3.17.0
+	 */
+	TypeHierarchy *TypeHierarchyClientCapabilities `json:"typeHierarchy,omitempty"`
+
+	/**
+	 * Capabilities specific to the `textDocument/inlayHint` request.
+	 *
+	 * @since 3.17.0
+	 */
+	InlayHint *InlayHintClientCapabilities `json:"inlayHint,omitempty"`
+
+	/**
+	 * Capabilities specific to the `textDocument/inlineValue` request.
+	 *
+	 * @since 3.17.0
+	 */
+	InlineValue *InlineValueClientCapabilities `json:"inlineValue,omitempty"`
 }
 
 type ServerCapabilities struct {
@@ -52,6 +171,27 @@ type ServerCapabilities struct {
 	 * @since 3.17.0
 	 */
 	DiagnosticProvider any `json:"diagnosticProvider,omitempty"` // nil | DiagnosticOptions | DiagnosticRegistrationOptions
+
+	/**
+	 * The server provides type hierarchy support.
+	 *
+	 * @since 3.17.0
+	 */
+	TypeHierarchyProvider any `json:"typeHierarchyProvider,omitempty"` // boolean | TypeHierarchyOptions | TypeHierarchyRegistrationOptions
+
+	/**
+	 * The server provides inlay hints.
+	 *
+	 * @since 3.17.0
+	 */
+	InlayHintProvider any `json:"inlayHintProvider,omitempty"` // boolean | InlayHintOptions | InlayHintRegistrationOptions
+
+	/**
+	 * The server provides inline values.
+	 *
+	 * @since 3.17.0
+	 */
+	InlineValueProvider any `json:"inlineValueProvider,omitempty"` // boolean | InlineValueOptions | InlineValueRegistrationOptions
 }
 
 func (self *ServerCapabilities) UnmarshalJSON(data []byte) error {
@@ -85,7 +225,10 @@ func (self *ServerCapabilities) UnmarshalJSON(data []byte) error {
 		WorkspaceSymbolProvider          json.RawMessage                              `json:"workspaceSymbolProvider,omitempty"`    // nil | bool | WorkspaceSymbolOptions
 		Workspace                        *protocol316.ServerCapabilitiesWorkspace     `json:"workspace,omitempty"`
 		Experimental                     *any                                         `json:"experimental,omitempty"`
-		DiagnosticProvider               json.RawMessage                              `json:"diagnosticProvider,omitempty"` // nil | DiagnosticOptions | DiagnosticRegistrationOptions
+		DiagnosticProvider               json.RawMessage                              `json:"diagnosticProvider,omitempty"`       // nil | DiagnosticOptions | DiagnosticRegistrationOptions
+		TypeHierarchyProvider            json.RawMessage                              `json:"typeHierarchyProvider,omitempty"`    // nil | bool | TypeHierarchyOptions | TypeHierarchyRegistrationOptions
+		InlayHintProvider                json.RawMessage                              `json:"inlayHintProvider,omitempty"`        // nil | bool | InlayHintOptions | InlayHintRegistrationOptions
+		InlineValueProvider              json.RawMessage                              `json:"inlineValueProvider,omitempty"`      // nil | bool | InlineValueOptions | InlineValueRegistrationOptions
 	}
 
 	if err := json.Unmarshal(data, &value); err == nil {
@@ -450,6 +593,63 @@ func (self *ServerCapabilities) UnmarshalJSON(data []byte) error {
 			}
 		}
 
+		if value.TypeHierarchyProvider != nil {
+			var value_ bool
+			if err = json.Unmarshal(value.TypeHierarchyProvider, &value_); err == nil {
+				self.TypeHierarchyProvider = value_
+			} else {
+				var value_ TypeHierarchyOptions
+				if err = json.Unmarshal(value.TypeHierarchyProvider, &value_); err == nil {
+					self.TypeHierarchyProvider = value_
+				} else {
+					var value_ TypeHierarchyRegistrationOptions
+					if err = json.Unmarshal(value.TypeHierarchyProvider, &value_); err == nil {
+						self.TypeHierarchyProvider = value_
+					} else {
+						return err
+					}
+				}
+			}
+		}
+
+		if value.InlayHintProvider != nil {
+			var value_ bool
+			if err = json.Unmarshal(value.InlayHintProvider, &value_); err == nil {
+				self.InlayHintProvider = value_
+			} else {
+				var value_ InlayHintOptions
+				if err = json.Unmarshal(value.InlayHintProvider, &value_); err == nil {
+					self.InlayHintProvider = value_
+				} else {
+					var value_ InlayHintRegistrationOptions
+					if err = json.Unmarshal(value.InlayHintProvider, &value_); err == nil {
+						self.InlayHintProvider = value_
+					} else {
+						return err
+					}
+				}
+			}
+		}
+
+		if value.InlineValueProvider != nil {
+			var value_ bool
+			if err = json.Unmarshal(value.InlineValueProvider, &value_); err == nil {
+				self.InlineValueProvider = value_
+			} else {
+				var value_ InlineValueOptions
+				if err = json.Unmarshal(value.InlineValueProvider, &value_); err == nil {
+					self.InlineValueProvider = value_
+				} else {
+					var value_ InlineValueRegistrationOptions
+					if err = json.Unmarshal(value.InlineValueProvider, &value_); err == nil {
+						self.InlineValueProvider = value_
+					} else {
+						return err
+					}
+				}
+			}
+		}
+
 		return nil
 	} else {
 		return err
@@ -468,4 +668,17 @@ type InitializeResult struct {
 	 * @since 3.15.0
 	 */
 	ServerInfo *protocol316.InitializeResultServerInfo `json:"serverInfo,omitempty"`
+
+	/**
+	 * The position encoding the server picked from the encodings offered
+	 * by the client via the client capability `general.positionEncodings`.
+	 *
+	 * If the client didn't provide any position encodings the only valid
+	 * value that a server can return is 'utf-16'.
+	 *
+	 * If omitted it defaults to 'utf-16'.
+	 *
+	 * @since 3.17.0
+	 */
+	PositionEncoding *PositionEncodingKind `json:"positionEncoding,omitempty"`
 }
